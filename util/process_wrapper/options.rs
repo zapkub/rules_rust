@@ -41,6 +41,9 @@ pub(crate) struct Options {
     pub(crate) stdout_file: Option<String>,
     // If set, redirects the child process stderr to this file.
     pub(crate) stderr_file: Option<String>,
+
+    pub(crate) json_output: Option<String>,
+
     // If set, it configures rustc to emit an rmeta file and then
     // quit.
     pub(crate) rustc_quit_on_rmeta: bool,
@@ -61,6 +64,7 @@ pub(crate) fn options() -> Result<Options, OptionError> {
     let mut copy_output_raw = None;
     let mut stdout_file = None;
     let mut stderr_file = None;
+    let mut json_output = None;
     let mut rustc_quit_on_rmeta_raw = None;
     let mut rustc_output_format_raw = None;
     let mut flags = Flags::new();
@@ -92,6 +96,11 @@ pub(crate) fn options() -> Result<Options, OptionError> {
         "--stderr-file",
         "Redirect subprocess stderr in this file.",
         &mut stderr_file,
+    );
+    flags.define_flag(
+        "--json-output",
+        "Redirect subprocess stderr in this file.",
+        &mut json_output,
     );
     flags.define_flag(
         "--rustc-quit-on-rmeta",
@@ -201,6 +210,7 @@ pub(crate) fn options() -> Result<Options, OptionError> {
         copy_output,
         stdout_file,
         stderr_file,
+        json_output,
         rustc_quit_on_rmeta,
         rustc_output_format,
     })

@@ -33,6 +33,7 @@ pub(crate) enum LineOutput {
 pub(crate) fn process_output<F>(
     read_end: &mut dyn Read,
     write_end: &mut dyn Write,
+    json_write_end: &mut dyn Write,
     mut process_line: F,
 ) -> io::Result<()>
 where
@@ -40,14 +41,20 @@ where
 {
     let mut reader = io::BufReader::new(read_end);
     let mut writer = io::LineWriter::new(write_end);
+    let mut raw_writer = io::LineWriter::new(json_write_end);
     loop {
         let mut line = String::new();
         let read_bytes = reader.read_line(&mut line)?;
         if read_bytes == 0 {
             break;
         }
+
+        let raw_line = line.clone();
         match process_line(line) {
-            LineOutput::Message(to_write) => writer.write_all(to_write.as_bytes())?,
+            LineOutput::Message(to_write) => {
+                writer.write_all(to_write.as_bytes())?;
+                raw_writer.write_all(raw_line.as_bytes())?;
+            },
             LineOutput::Skip => {}
             LineOutput::Terminate => return Ok(()),
         };

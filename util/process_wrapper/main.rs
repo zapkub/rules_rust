@@ -87,6 +87,20 @@ fn main() {
         Box::new(io::stderr())
     };
 
+    let mut json_output: Box<dyn io::Write> = if let Some(json_output_file) = opts.json_output {
+        Box::new(
+            OpenOptions::new()
+                .create(true)
+                .truncate(true)
+                .write(true)
+                .open(json_output_file)
+                .expect("process wrapper error: unable to open stderr file"),
+        )
+    } else {
+        Box::new(io::sink())
+    };
+
+
     let mut child_stderr = child.stderr.take().unwrap();
 
     let mut was_killed = false;
@@ -96,7 +110,7 @@ fn main() {
         // that we emitted a metadata file.
         let mut me = false;
         let metadata_emitted = &mut me;
-        let result = process_output(&mut child_stderr, stderr.as_mut(), move |line| {
+        let result = process_output(&mut child_stderr, stderr.as_mut(), json_output.as_mut(), move |line| {
             if quit_on_rmeta {
                 rustc::stop_on_rmeta_completion(line, format, metadata_emitted)
             } else {
@@ -112,7 +126,7 @@ fn main() {
         result
     } else {
         // Process output normally by forwarding stderr
-        process_output(&mut child_stderr, stderr.as_mut(), LineOutput::Message)
+        process_output(&mut child_stderr, stderr.as_mut(), json_output.as_mut(), LineOutput::Message)
     };
     result.expect("process wrapper error: failed to process stderr");
 

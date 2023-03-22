@@ -126,6 +126,7 @@ def _clippy_aspect_impl(target, ctx):
         build_env_files = build_env_files,
         build_flags_files = build_flags_files,
         emit = ["dep-info", "metadata"],
+        use_json_output = True,
     )
 
     if crate_info.is_test:
@@ -133,11 +134,14 @@ def _clippy_aspect_impl(target, ctx):
 
     clippy_flags = ctx.attr._clippy_flags[ClippyFlagsInfo].clippy_flags
 
+
     # For remote execution purposes, the clippy_out file must be a sibling of crate_info.output
     # or rustc may fail to create intermediate output files because the directory does not exist.
     if ctx.attr._capture_output[CaptureClippyOutputInfo].capture_output:
         clippy_out = ctx.actions.declare_file(ctx.label.name + ".clippy.out", sibling = crate_info.output)
         args.process_wrapper_flags.add("--stderr-file", clippy_out.path)
+
+
 
         if clippy_flags:
             fail("""Combining @rules_rust//:clippy_flags with @rules_rust//:capture_clippy_output=true is currently not supported.
@@ -170,10 +174,16 @@ See https://github.com/bazelbuild/rules_rust/pull/1264#discussion_r853241339 for
     env["CLIPPY_CONF_DIR"] = "${{pwd}}/{}".format(ctx.file._config.dirname)
     compile_inputs = depset([ctx.file._config], transitive = [compile_inputs])
 
+
+    clippy_json_out = ctx.actions.declare_file(ctx.label.name + ".clippy.json.out", sibling = crate_info.output)
+    args.process_wrapper_flags.add("--json-output", clippy_json_out.path)
+
+    outputs = [clippy_out, clippy_json_out]
+
     ctx.actions.run(
         executable = ctx.executable._process_wrapper,
         inputs = compile_inputs,
-        outputs = [clippy_out],
+        outputs = outputs,
         env = env,
         tools = [toolchain.clippy_driver],
         arguments = args.all,
